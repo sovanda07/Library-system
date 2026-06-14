@@ -1,0 +1,84 @@
+version: '3'
+
+services:
+
+  # NGINX Load Balancer
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - auth_service
+      - book_service_1
+      - book_service_2
+      - borrow_service
+    networks:
+      - library-network
+
+  # Auth Service
+  auth_service:
+    build: 
+      context: .
+      dockerfile: Auth_service/Dockerfile
+    environment:
+      - MONGO_URI=${AUTH_MONGO_URI}
+      - JWT_SECRETE=${JWT_SECRETE}
+    networks:
+      - library-network
+
+  # Book Service instance 1
+  book_service_1:
+    build: 
+      context: .
+      dockerfile: Book_service/Dockerfile
+    environment:
+      - MONGO_URI=${BOOK_MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    networks:
+      - library-network
+
+  # Book Service instance 2 — same image different container
+  book_service_2:
+    build: 
+      context: .
+      dockerfile: Book_service/Dockerfile
+    environment:
+      - MONGO_URI=${BOOK_MONGO_URI}
+      - JWT_SECRETE=${JWT_SECRETE}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    networks:
+      - library-network
+
+  # Borrow Service
+  borrow_service:
+    build:
+      context: .
+      dockerfile: Borrow_service/Dockerfile
+    environment:
+      - MONGO_URI=${BORROW_MONGO_URI}
+      - JWT_SECRETE=${JWT_SECRETE}
+      - BOOK_SERVICE_URL=http://nginx/books
+    depends_on:
+      - book_service_1
+      - book_service_2
+    networks:
+      - library-network
+
+  # Redis
+  redis:
+    image: redis:latest
+    networks:
+      - library-network
+
+networks:
+  library-network:
+    driver: bridge
