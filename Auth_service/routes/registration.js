@@ -27,6 +27,7 @@ route.post('/register', async (req, res) => {
             email: req.body.email,
             password: hashedPassword,
             memberId: memberId,
+            role: req.body.role || 'member',
         });
 
         const savedUser = await user.save();
@@ -48,3 +49,4 @@ route.post('/register', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
+module.exports = router;
