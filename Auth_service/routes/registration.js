@@ -1,10 +1,10 @@
 const express = require('express');
-const route = express.Router();
-const User = require('../models/users');
+const router = express.Router();
+const User = require('../models/Users');
 const bcrypt = require('bcrypt');
 
 // Registration 
-route.post('/register', async (req, res) => {
+router.post('/register', async (req, res) => {
     try {
         // Generate unique memberId
         let memberId;

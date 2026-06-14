@@ -10,6 +10,7 @@ app.use(express.json());
 app.use('/auth', require('./routes/registration'));
 app.use('/auth', require('./routes/login'));
 
-app.listen(3000, () => {
-  console.log('Authentication service running on port 3000');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log('Authentication service running on port ${PORT}');
 });
