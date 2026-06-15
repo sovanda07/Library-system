@@ -14,14 +14,31 @@ services:
     networks:
       - library-network
 
+  api_gateway:
+    image: mengkheangseng99/api-gateway
+    build:
+      context: .
+      dockerfile: API_Gateway/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - auth_service
+      - book_service_1
+      - book_service_2
+      - borrow_service
+    networks:
+      - library-network
+
   auth_service:
     image: mengkheangseng99/auth-service
     build:
       context: .
       dockerfile: Auth_service/Dockerfile
     environment:
-      - MONGO_URI=${AUTH_MONGO_URI}
-      - JWT_SECRET=${JWT_SECRETE}
+      - MONGO_URI=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
     networks:
       - library-network
 
@@ -31,8 +48,8 @@ services:
       context: .
       dockerfile: Book_service/Dockerfile
     environment:
-      - MONGO_URI=${BOOK_MONGO_URI}
-      - JWT_SECRET=${JWT_SECRETE}
+      - MONGO_URI=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     depends_on:
@@ -46,8 +63,8 @@ services:
       context: .
       dockerfile: Book_service/Dockerfile
     environment:
-      - MONGO_URI=${BOOK_MONGO_URI}
-      - JWT_SECRET=${JWT_SECRETE}
+      - MONGO_URI=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     depends_on:
@@ -61,8 +78,8 @@ services:
       context: .
       dockerfile: Borrow_service/Dockerfile
     environment:
-      - MONGO_URI=${BORROW_MONGO_URI}
-      - JWT_SECRET=${JWT_SECRETE}
+      - MONGO_URI=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
       - BOOK_SERVICE_URL=http://nginx/books
     depends_on:
       - book_service_1
