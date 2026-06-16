@@ -11,7 +11,7 @@ app.use('/books', require('./routes/books'));
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log('Book service running on port ${PORT}');
+  console.log(`Book service running on port ${PORT}`);
 });
 
 // const express = require('express');

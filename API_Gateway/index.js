@@ -9,10 +9,16 @@ const authorizeRole = require('../shared/middleware/authorizeRole');
 
 app.use(express.json());
 
+// Auth routes — no token needed, just passes through
+app.use('/auth', (req, res) => {
+  console.log('API Gateway → Auth Service');
+  proxy.web(req, res, { target: 'http://auth_service:3000' });
+});
+
 // Book routes — member + librarian
 app.use('/books', verifyToken, authorizeRole('member', 'librarian'), (req, res) => {
-  console.log('API Gateway → Book Service');
-  proxy.web(req, res, { target: 'http://nginx:80' });
+  console.log('API Gateway → Book Service (load balanced)');
+  proxy.web(req, res, { target: 'http://nginx:8080' });
 });
 
 // Borrow routes — member only
