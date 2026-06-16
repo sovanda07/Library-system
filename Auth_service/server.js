@@ -12,5 +12,5 @@ app.use('/auth', require('./routes/login'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log('Authentication service running on port ${PORT}');
+  console.log(`Authentication service running on port ${PORT}`);
 });
