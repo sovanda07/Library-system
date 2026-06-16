@@ -7,8 +7,6 @@ require('dotenv').config();
 const verifyToken = require('../shared/middleware/verifyToken');
 const authorizeRole = require('../shared/middleware/authorizeRole');
 
-app.use(express.json());
-
 // Auth routes — no token needed, just passes through
 app.use('/auth', (req, res) => {
   console.log('API Gateway → Auth Service');
@@ -23,7 +21,6 @@ app.use('/books', verifyToken, authorizeRole('member', 'librarian'), (req, res) 
 
 // Borrow routes — member only
 app.use('/borrow/borrow', verifyToken, authorizeRole('member'), (req, res) => {
-  console.log('API Gateway → Borrow Service');
   proxy.web(req, res, { target: 'http://borrow_service:3002' });
 });
 
