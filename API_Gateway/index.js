@@ -38,6 +38,6 @@ app.use('/borrow/overdue', verifyToken, authorizeRole('librarian'), (req, res) =
   proxy.web(req, res, { target: 'http://borrow_service:3002' });
 });
 
-app.listen(4000, () => {
+app.listen(process.env.PORT || 4000, () => {
   console.log('API Gateway running on port 4000');
 });

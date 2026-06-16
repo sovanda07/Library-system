@@ -11,5 +11,5 @@ app.use('/borrow', require('./routes/borrow'));
 
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => {
-  console.log('Borrow service running on port ${PORT}');
+  console.log(`Borrow service running on port ${PORT}`);
 });
