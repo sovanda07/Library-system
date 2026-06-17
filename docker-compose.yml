@@ -2,15 +2,29 @@ services:
 
   nginx:
     image: nginx:latest
-    ports:
-      - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - book_service_1
+      - book_service_2
+    networks:
+      - library-network
+
+  api_gateway:
+    image: mengkheangseng99/api-gateway
+    build:
+      context: .
+      dockerfile: API_Gateway/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       - auth_service
       - book_service_1
       - book_service_2
       - borrow_service
+      - nginx
     networks:
       - library-network
 
@@ -63,7 +77,7 @@ services:
     environment:
       - MONGO_URI=${MONGO_URI}
       - JWT_SECRET=${JWT_SECRET}
-      - BOOK_SERVICE_URL=http://nginx/books
+      - BOOK_SERVICE_URL=http://nginx:8080
     depends_on:
       - book_service_1
       - book_service_2
