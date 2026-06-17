@@ -6,6 +6,11 @@ const bcrypt = require('bcrypt');
 // Registration 
 router.post('/register', async (req, res) => {
     try {
+        // Validate password
+        if (!req.body.password || req.body.password.length < 8) {
+            return res.status(400).json({ message: 'Password must be at least 8 characters' });
+        }
+
         // Generate unique memberId
         let memberId;
         let isUnique = false;
@@ -49,4 +54,5 @@ router.post('/register', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
+
 module.exports = router;
