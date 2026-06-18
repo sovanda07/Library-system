@@ -29,7 +29,7 @@ services:
       - library-network
 
   auth_service:
-    image: mengkheangseng99/auth-service
+    image: ${DOCKER_USERNAME}/auth-service
     build:
       context: .
       dockerfile: Auth_service/Dockerfile
@@ -40,7 +40,7 @@ services:
       - library-network
 
   book_service_1:
-    image: mengkheangseng99/book-service
+    image: ${DOCKER_USERNAME}/book-service
     build:
       context: .
       dockerfile: Book_service/Dockerfile
@@ -55,7 +55,7 @@ services:
       - library-network
 
   book_service_2:
-    image: mengkheangseng99/book-service
+    image: ${DOCKER_USERNAME}/book-service
     build:
       context: .
       dockerfile: Book_service/Dockerfile
@@ -70,14 +70,14 @@ services:
       - library-network
 
   borrow_service:
-    image: mengkheangseng99/borrow-service
+    image: ${DOCKER_USERNAME}/borrow-service
     build:
       context: .
       dockerfile: Borrow_service/Dockerfile
     environment:
       - MONGO_URI=${MONGO_URI}
       - JWT_SECRET=${JWT_SECRET}
-      - BOOK_SERVICE_URL=http://nginx:8080
+      - BOOK_SERVICE_URL=http://nginx
     depends_on:
       - book_service_1
       - book_service_2
