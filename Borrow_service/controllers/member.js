@@ -2,11 +2,14 @@ const Borrow = require('../models/Borrow');
 
 const BOOK_SERVICE_URL = process.env.BOOK_SERVICE_URL;
 
-// Borrow a book
-exports.borrowBook = async (req, res) => {
-  try {
-    // Call Book_service to check availability
-    const bookResponse = await fetch(`${BOOK_SERVICE_URL}/books/${req.body.bookId}`);
+  // Borrow a book
+  exports.borrowBook = async (req, res) => {
+    try {
+      const bookResponse = await fetch(`${BOOK_SERVICE_URL}/books/${req.body.bookId}`, {
+      headers: {
+        'Authorization': req.headers.authorization
+      }
+    });
     const book = await bookResponse.json();
 
     if (!bookResponse.ok) return res.status(404).json({ message: 'Book not found' });
