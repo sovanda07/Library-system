@@ -47,7 +47,19 @@ exports.getBook = async (req, res) => {
 // Add book
 exports.addBook = async (req, res) => {
   try {
+    // Generate unique bookId
+    let bookId;
+    let isUnique = false;
+
+    while (!isUnique) {
+      const randomDigits = Math.floor(1000 + Math.random() * 9000);
+      bookId = `B${randomDigits}`;
+      const existing = await Book.findOne({ bookId });
+      if (!existing) isUnique = true;
+    }
+
     const book = new Book({
+      bookId,
       title: req.body.title,
       author: req.body.author,
       isbn: req.body.isbn,
@@ -56,11 +68,9 @@ exports.addBook = async (req, res) => {
       description: req.body.description,
       availableCopies: req.body.availableCopies
     });
+
     const newBook = await book.save();
-
-    // clear all_books cache
     await redis.del('all_books');
-
     res.status(201).json(newBook);
   } catch (err) {
     res.status(400).json({ message: err.message });
