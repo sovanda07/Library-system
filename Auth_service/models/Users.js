@@ -11,3 +11,19 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);
+
+// {
+//   "name": "Jane Doe",
+//   "email": "jane.doe@example.com",
+//   "password": "$2b$10$X7rE8k9P0wQ2m...",
+//   "role": "member",
+// }
+
+//   "email": "jane.doe@example.com",
+//   "password": "$2b$10$X7rE8k9P0wQ2m...",
+
+
+// email
+
+// token, newPassword
+
