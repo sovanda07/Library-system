@@ -6,9 +6,15 @@ const librarian = require('../controllers/librarian');
 const member = require('../controllers/member');
 const Book = require('../models/Books'); // add this at top if not there
 
-// Member + librarian routes
+// Shared routes (Both Members and Librarians)
 router.get('/', verifyToken, authorizeRole('member', 'librarian'), librarian.getAllBooks);
+
+// 1. Specific route goes FIRST
+router.get('/search', verifyToken, authorizeRole('member', 'librarian'), member.searchBooks);
+
+// 2. Generic wildcard route goes SECOND
 router.get('/:id', verifyToken, authorizeRole('member', 'librarian'), member.getBook);
+
 
 // Librarian only routes
 router.post('/', verifyToken, authorizeRole('librarian'), librarian.addBook);

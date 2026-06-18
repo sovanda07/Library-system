@@ -44,6 +44,25 @@ exports.getBook = async (req, res) => {
   }
 };
 
+// Search by author and/or genre — both optional, can be used together
+exports.searchBooks = async (req, res) => {
+  try {
+    const filter = {};
+
+    if (req.query.author) {
+      filter.author = { $regex: req.query.author, $options: 'i' };
+    }
+    if (req.query.genre) {
+      filter.genre = { $regex: req.query.genre, $options: 'i' };
+    }
+
+    const books = await Book.find(filter);
+    res.json(books);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // Add book
 exports.addBook = async (req, res) => {
   try {
