@@ -44,6 +44,17 @@ exports.getBook = async (req, res) => {
   }
 };
 
+// Get book by custom ID
+exports.getBookByCustomId = async (req, res) => {
+  try {
+    const book = await Book.findOne({ bookId: req.params.bookId });
+    if (!book) return res.status(404).json({ message: 'Book not found' });
+    res.json(book);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // Add book
 exports.addBook = async (req, res) => {
   try {
@@ -116,6 +127,7 @@ exports.deleteBook = async (req, res) => {
 module.exports = {
   getAllBooks: exports.getAllBooks,
   getBook: exports.getBook,
+  getBookByCustomId: exports.getBookByCustomId, 
   addBook: exports.addBook,
   editBook: exports.editBook,
   deleteBook: exports.deleteBook,
