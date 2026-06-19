@@ -12,18 +12,3 @@ const bookSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 module.exports = mongoose.model('Book', bookSchema);
-
-
-// {
-//   "title": "Clean Code"
-//   "author": "Robert Martin",
-//   "isbn": "978-0132350885",
-//   "genre": "horror",
-//   "publishedYear": 2004
-//   "description" : "a man turns to zombie, this when the tragic starts",
-//   "availableCopies": 3
-// }
-
-
-
-//id
