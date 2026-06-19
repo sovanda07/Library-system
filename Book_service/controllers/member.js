@@ -24,11 +24,15 @@ exports.getBook = async (req, res) => {
     const cached = await redis.get(`book_${req.params.id}`);
     if (cached) {
       const book = JSON.parse(cached);
-      return res.json({
-        title: book.title,
-        author: book.author,
-        availableCopies: book.availableCopies
-      });
+      res.json({
+  title: book.title,
+  author: book.author,
+  isbn: book.isbn,
+  genre: book.genre,
+  publishedYear: book.publishedYear,
+  description: book.description,
+  availableCopies: book.availableCopies
+});
     }
 
     const book = await Book.findById(req.params.id);
@@ -39,6 +43,10 @@ exports.getBook = async (req, res) => {
     res.json({
       title: book.title,
       author: book.author,
+      isbn: book.isbn,
+      genre: book.genre,
+      publishedYear: book.publishedYear,
+      description: book.description,
       availableCopies: book.availableCopies
     });
   } catch (err) {

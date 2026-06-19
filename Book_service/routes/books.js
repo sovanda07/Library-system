@@ -9,6 +9,7 @@ const Book = require('../models/Books'); // add this at top if not there
 // Member + librarian routes
 router.get('/', verifyToken, authorizeRole('member', 'librarian'), librarian.getAllBooks);
 router.get('/:id', verifyToken, authorizeRole('member', 'librarian'), member.getBook);
+router.get('/find/:bookId', verifyToken, authorizeRole('member', 'librarian'), librarian.getBookByCustomId);
 
 // Librarian only routes
 router.post('/', verifyToken, authorizeRole('librarian'), librarian.addBook);

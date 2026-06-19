@@ -7,10 +7,9 @@ exports.getAllBorrows = async (req, res) => {
   try {
     const borrows = await Borrow.find();
 
-    // Call Book_service to get book details for each borrow
     const borrowsWithBooks = await Promise.all(
       borrows.map(async (borrow) => {
-        const bookResponse = await fetch(`${BOOK_SERVICE_URL}/books/${borrow.bookId}`);
+        const bookResponse = await fetch(`${BOOK_SERVICE_URL}/books/find/${borrow.bookId}`);
         const book = await bookResponse.json();
         return { ...borrow.toObject(), book };
       })
@@ -32,10 +31,9 @@ exports.getOverdue = async (req, res) => {
 
     const overdue = await Borrow.find({ status: 'overdue' });
 
-    // Call Book_service to get book details for each overdue
     const overdueWithBooks = await Promise.all(
       overdue.map(async (borrow) => {
-        const bookResponse = await fetch(`${BOOK_SERVICE_URL}/books/${borrow.bookId}`);
+        const bookResponse = await fetch(`${BOOK_SERVICE_URL}/books/find/${borrow.bookId}`);
         const book = await bookResponse.json();
         return { ...borrow.toObject(), book };
       })
