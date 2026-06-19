@@ -11,7 +11,7 @@ services:
       - library-network
 
   api_gateway:
-    image: mengkheangseng99/api-gateway
+    image: ${DOCKER_USERNAME}/api-gateway
     build:
       context: .
       dockerfile: API_Gateway/Dockerfile
