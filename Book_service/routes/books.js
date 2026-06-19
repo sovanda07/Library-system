@@ -9,7 +9,7 @@ const Book = require('../models/Books'); // add this at top if not there
 // Shared routes (Both Members and Librarians)
 router.get('/', verifyToken, authorizeRole('member', 'librarian'), librarian.getAllBooks);
 
-// 1. Specific route goes FIRST
+// At lines 11-13 of routes/books.js
 router.get('/search', verifyToken, authorizeRole('member', 'librarian'), member.searchBooks);
 
 // 2. Generic wildcard route goes SECOND

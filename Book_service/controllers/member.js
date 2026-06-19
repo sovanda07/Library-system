@@ -1,5 +1,6 @@
 const Book = require('../models/Books');
 const redis = require('../config/redis');
+const { searchBooks } = require('./librarian');
 
 exports.getAllBooks = async (req, res) => {
   try {
@@ -51,7 +52,3 @@ exports.searchBooks = async (req, res) => {
   }
 };
 
-module.exports = {
-  getAllBooks: exports.getAllBooks,
-  getBook: exports.getBook,
-};
