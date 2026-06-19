@@ -14,6 +14,7 @@ router.get('/search', verifyToken, authorizeRole('member', 'librarian'), member.
 
 // 2. Generic wildcard route goes SECOND
 router.get('/:id', verifyToken, authorizeRole('member', 'librarian'), member.getBook);
+router.get('/find/:bookId', verifyToken, authorizeRole('member', 'librarian'), librarian.getBookByCustomId);
 
 
 // Librarian only routes

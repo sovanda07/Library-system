@@ -2,10 +2,10 @@ const Borrow = require('../models/Borrow');
 
 const BOOK_SERVICE_URL = process.env.BOOK_SERVICE_URL;
 
-  // Borrow a book
-  exports.borrowBook = async (req, res) => {
-    try {
-      const bookResponse = await fetch(`${BOOK_SERVICE_URL}/books/${req.body.bookId}`, {
+// Borrow a book
+exports.borrowBook = async (req, res) => {
+  try {
+    const bookResponse = await fetch(`${BOOK_SERVICE_URL}/books/find/${req.body.bookId}`, {
       headers: {
         'Authorization': req.headers.authorization
       }
@@ -14,12 +14,10 @@ const BOOK_SERVICE_URL = process.env.BOOK_SERVICE_URL;
 
     if (!bookResponse.ok) return res.status(404).json({ message: 'Book not found' });
 
-    // Check if book is available
     if (book.availableCopies === 0) {
       return res.status(400).json({ message: 'No copies available' });
     }
 
-    // Check if member already borrowed this book
     const existingBorrow = await Borrow.findOne({
       memberId: req.user.memberId,
       bookId: req.body.bookId,
@@ -29,11 +27,9 @@ const BOOK_SERVICE_URL = process.env.BOOK_SERVICE_URL;
       return res.status(400).json({ message: 'You already borrowed this book' });
     }
 
-    // Calculate due date — 14 days from now
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 14);
 
-    // Create borrow record
     const borrow = new Borrow({
       memberId: req.user.memberId,
       bookId: req.body.bookId,
@@ -41,8 +37,7 @@ const BOOK_SERVICE_URL = process.env.BOOK_SERVICE_URL;
     });
     await borrow.save();
 
-    // Call Book_service to decrease availableCopies by 1
-    await fetch(`${BOOK_SERVICE_URL}/books/${req.body.bookId}/decrease`, {
+    await fetch(`${BOOK_SERVICE_URL}/books/${book._id}/decrease`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -68,8 +63,14 @@ exports.returnBook = async (req, res) => {
     borrow.status = 'returned';
     await borrow.save();
 
+    // Get MongoDB _id from book service
+    const bookResponse = await fetch(`${BOOK_SERVICE_URL}/books/find/${req.params.bookId}`, {
+      headers: { 'Authorization': req.headers.authorization }
+    });
+    const book = await bookResponse.json();
+
     // Call Book_service to increase availableCopies by 1
-    await fetch(`${BOOK_SERVICE_URL}/books/${req.params.bookId}/increase`, {
+    await fetch(`${BOOK_SERVICE_URL}/books/${book._id}/increase`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -83,9 +84,37 @@ exports.returnBook = async (req, res) => {
 // View own borrow history
 exports.myHistory = async (req, res) => {
   try {
-    const history = await Borrow.find({ memberId: req.user.memberId })
-      .populate('bookId', 'title author');
-    res.json(history);
+    const history = await Borrow.find({ memberId: req.user.memberId });
+
+    // Fetch book details for each borrow record
+    const historyWithBooks = await Promise.all(
+      history.map(async (borrow) => {
+        const bookResponse = await fetch(`${BOOK_SERVICE_URL}/books/find/${borrow.bookId}`, {
+          headers: { 'Authorization': req.headers.authorization }
+        });
+        const book = await bookResponse.json();
+
+        return {
+          _id: borrow._id,
+          memberId: borrow.memberId,
+          bookId: borrow.bookId,
+          book: {
+            title: book.title,
+            author: book.author,
+            isbn: book.isbn,
+            genre: book.genre,
+            publishedYear: book.publishedYear,
+            description: book.description,
+          },
+          borrowDate: borrow.borrowDate,
+          dueDate: borrow.dueDate,
+          returnDate: borrow.returnDate,
+          status: borrow.status,
+        };
+      })
+    );
+
+    res.json(historyWithBooks);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
