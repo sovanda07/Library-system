@@ -7,7 +7,7 @@ require('dotenv').config();
 const verifyToken = require('../shared/middleware/verifyToken');
 const authorizeRole = require('../shared/middleware/authorizeRole');
 
-// Handle proxy errors — this is why you saw "socket hang up"
+// Handle proxy errors
 proxy.on('error', (err, req, res) => {
   console.error('Proxy error:', err.message);
   res.writeHead(502, { 'Content-Type': 'application/json' });
@@ -15,39 +15,64 @@ proxy.on('error', (err, req, res) => {
 });
 
 // Auth routes — no token needed
+// POST /auth/login
+// POST /auth/register
+// POST /auth/forgot-password
+// POST /auth/reset-password
 app.use('/auth', (req, res) => {
   console.log(`API Gateway → Auth Service: ${req.method} ${req.originalUrl}`);
   proxy.web(req, res, { target: 'http://auth_service:3000' });
 });
 
+// Block internal book routes from public access
+// PATCH /books/:id/decrease
+// PATCH /books/:id/increase
+app.use('/books/:id/decrease', (req, res) => {
+  res.status(403).json({ error: 'Forbidden' });
+});
+app.use('/books/:id/increase', (req, res) => {
+  res.status(403).json({ error: 'Forbidden' });
+});
+
 // Book routes — member + librarian
+// GET  /books
+// GET  /books/search
+// GET  /books/:id
+// GET  /books/find/:bookId
+// POST /books
+// PATCH /books/:id
+// DELETE /books/:id
 app.use('/books', verifyToken, authorizeRole('member', 'librarian'), (req, res) => {
   console.log(`API Gateway → Book Service: ${req.method} ${req.originalUrl}`);
   proxy.web(req, res, { target: 'http://nginx:80' });
 });
 
-// Borrow routes — member only
-app.use('/borrow/borrow', verifyToken, authorizeRole('member'), (req, res) => {
-  proxy.web(req, res, { target: 'http://borrow_service:3002' });
-});
+// Borrow routes
+// POST   /borrow          — member
+// PATCH  /borrow/return/:bookId  — member
+// GET    /borrow/history  — member
+// GET    /borrow/all      — librarian
+// GET    /borrow/overdue  — librarian
+app.use('/borrow', verifyToken, (req, res, next) => {
+  const method = req.method;
+  const path = req.path;
 
-app.use('/borrow/return', verifyToken, authorizeRole('member'), (req, res) => {
-  proxy.web(req, res, { target: 'http://borrow_service:3002' });
-});
+  // Member only
+  if (method === 'POST' && path === '/') return authorizeRole('member')(req, res, next);
+  if (method === 'PATCH' && path.startsWith('/return')) return authorizeRole('member')(req, res, next);
+  if (method === 'GET' && path === '/history') return authorizeRole('member')(req, res, next);
 
-app.use('/borrow/history', verifyToken, authorizeRole('member'), (req, res) => {
-  proxy.web(req, res, { target: 'http://borrow_service:3002' });
-});
+  // Librarian only
+  if (method === 'GET' && path === '/all') return authorizeRole('librarian')(req, res, next);
+  if (method === 'GET' && path === '/overdue') return authorizeRole('librarian')(req, res, next);
 
-// Borrow routes — librarian only
-app.use('/borrow/all', verifyToken, authorizeRole('librarian'), (req, res) => {
-  proxy.web(req, res, { target: 'http://borrow_service:3002' });
-});
-
-app.use('/borrow/overdue', verifyToken, authorizeRole('librarian'), (req, res) => {
+  // No matching route
+  res.status(404).json({ error: 'Route not found' });
+}, (req, res) => {
+  console.log(`API Gateway → Borrow Service: ${req.method} ${req.originalUrl}`);
   proxy.web(req, res, { target: 'http://borrow_service:3002' });
 });
 
 app.listen(process.env.PORT || 4000, () => {
-  console.log('API Gateway running on port 4000');
+  console.log(`API Gateway running on port ${process.env.PORT || 4000}`);
 });
