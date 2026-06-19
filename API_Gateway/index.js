@@ -20,7 +20,7 @@ proxy.on('error', (err, req, res) => {
 // POST /auth/forgot-password
 // POST /auth/reset-password
 app.use('/auth', (req, res) => {
-  console.log(`API Gateway → Auth Service: ${req.method} ${req.originalUrl}`);
+  req.url = req.originalUrl.replace('/auth', '');
   proxy.web(req, res, { target: 'http://auth_service:3000' });
 });
 
@@ -43,6 +43,7 @@ app.use('/books/:id/increase', (req, res) => {
 // PATCH /books/:id
 // DELETE /books/:id
 app.use('/books', verifyToken, authorizeRole('member', 'librarian'), (req, res) => {
+  req.url = req.originalUrl; // ✅ preserve full path including /books
   console.log(`API Gateway → Book Service: ${req.method} ${req.originalUrl}`);
   proxy.web(req, res, { target: 'http://nginx:80' });
 });
@@ -69,6 +70,7 @@ app.use('/borrow', verifyToken, (req, res, next) => {
   // No matching route
   res.status(404).json({ error: 'Route not found' });
 }, (req, res) => {
+  req.url = req.originalUrl;
   console.log(`API Gateway → Borrow Service: ${req.method} ${req.originalUrl}`);
   proxy.web(req, res, { target: 'http://borrow_service:3002' });
 });
