@@ -34,6 +34,7 @@ exports.getBook = async (req, res) => {
 };
 
 exports.searchBooks = async (req, res) => {
+  console.log('searchBooks hit', req.query);
   try {
     const filter = {};
 

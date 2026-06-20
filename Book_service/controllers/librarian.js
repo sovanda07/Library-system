@@ -149,3 +149,12 @@ exports.deleteBook = async (req, res) => {
   }
 };
 
+// correct — reference the exports directly
+module.exports = {
+  getAllBooks: exports.getAllBooks,
+  getBook: exports.getBook,
+  getBookByCustomId: exports.getBookByCustomId, 
+  addBook: exports.addBook,
+  editBook: exports.editBook,
+  deleteBook: exports.deleteBook,
+};

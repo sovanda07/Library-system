@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const borrowSchema = new mongoose.Schema({
   memberId:  { type: String, required: true },
-  bookId:    { type: String, required: true },
+  bookId:    { type: String, ref: 'Book', required: true }, 
   borrowDate:{ type: Date, default: Date.now },
   dueDate:   { type: Date, required: true },
   returnDate:{ type: Date, default: null },

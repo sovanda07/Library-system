@@ -7,9 +7,9 @@ connectDB();
 
 app.use(express.json());
 
-app.use('/auth', require('./routes/registration'));
-app.use('/auth', require('./routes/login'));
-app.use('/auth', require('./routes/resetPassword'));
+app.use('/', require('./routes/registration'));
+app.use('/', require('./routes/login'));
+app.use('/', require('./routes/resetPassword'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
