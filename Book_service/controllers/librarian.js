@@ -4,50 +4,38 @@ const redis = require('../config/redis');
 // Get all books
 exports.getAllBooks = async (req, res) => {
   try {
-    // check Redis first
     const cached = await redis.get('all_books');
     if (cached) {
       return res.json(JSON.parse(cached));
     }
-
-    // not in Redis → fetch from MongoDB
     const books = await Book.find();
-
-    // save in Redis for 1 hour
     await redis.set('all_books', JSON.stringify(books), 'EX', 3600);
-
     res.json(books);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Get one book
+// Get one book by custom bookId
 exports.getBook = async (req, res) => {
   try {
-    // check Redis first
     const cached = await redis.get(`book_${req.params.id}`);
     if (cached) {
       return res.json(JSON.parse(cached));
     }
-
-    // not in Redis → fetch from MongoDB
-    const book = await Book.findById(req.params.id);
+    const book = await Book.findOne({ bookId: req.params.id });
     if (!book) return res.status(404).json({ message: 'Book not found' });
-
-    // save in Redis for 1 hour
     await redis.set(`book_${req.params.id}`, JSON.stringify(book), 'EX', 3600);
-
     res.json(book);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
+// Search by title, author, genre
 exports.searchBooks = async (req, res) => {
   try {
     const filter = {};
-
     if (req.query.title) {
       filter.title = { $regex: req.query.title, $options: 'i' };
     }
@@ -57,37 +45,21 @@ exports.searchBooks = async (req, res) => {
     if (req.query.genre) {
       filter.genre = { $regex: req.query.genre, $options: 'i' };
     }
-
     const books = await Book.find(filter);
-
     if (books.length === 0) {
       return res.status(404).json({ message: 'No books found' });
     }
-
     res.json(books);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-
-// Get book by custom ID
-exports.getBookByCustomId = async (req, res) => {
-  try {
-    const book = await Book.findOne({ bookId: req.params.bookId });
-    if (!book) return res.status(404).json({ message: 'Book not found' });
-    res.json(book);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// Add book
+// Add book — auto generate bookId
 exports.addBook = async (req, res) => {
   try {
     let bookId;
     let isUnique = false;
-
     while (!isUnique) {
       const randomDigits = Math.floor(1000 + Math.random() * 9000);
       bookId = `B${randomDigits}`;
@@ -114,38 +86,32 @@ exports.addBook = async (req, res) => {
   }
 };
 
-// Edit book
+// Edit book by custom bookId
 exports.editBook = async (req, res) => {
   try {
-    const book = await Book.findByIdAndUpdate(
-      req.params.id,
+    const book = await Book.findOneAndUpdate(
+      { bookId: req.params.id },
       req.body,
       { new: true }
     );
     if (!book) return res.status(404).json({ message: 'Book not found' });
-
-    // clear both caches
     await redis.del('all_books');
     await redis.del(`book_${req.params.id}`);
-
     res.json({ message: 'Book updated', book });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 };
 
-// Delete book
+// Delete book by custom bookId
 exports.deleteBook = async (req, res) => {
   try {
-    await Book.findByIdAndDelete(req.params.id);
-
-    // clear both caches
+    const book = await Book.findOneAndDelete({ bookId: req.params.id });
+    if (!book) return res.status(404).json({ message: 'Book not found' });
     await redis.del('all_books');
     await redis.del(`book_${req.params.id}`);
-
     res.json({ message: 'Book deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
-
