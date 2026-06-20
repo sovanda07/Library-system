@@ -22,7 +22,7 @@ app.use('/books', verifyToken, authorizeRole('member', 'librarian'), (req, res) 
 });
 
 // Borrow routes — member only
-app.use('/borrow/borrow', verifyToken, authorizeRole('member'), (req, res) => {
+app.use('/borrow', verifyToken, authorizeRole('member'), (req, res) => {
   req.url = req.originalUrl;
   proxy.web(req, res, { target: 'http://borrow_service:3002' });
 });
