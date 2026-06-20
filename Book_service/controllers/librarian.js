@@ -44,6 +44,33 @@ exports.getBook = async (req, res) => {
   }
 };
 
+exports.searchBooks = async (req, res) => {
+  try {
+    const filter = {};
+
+    if (req.query.title) {
+      filter.title = { $regex: req.query.title, $options: 'i' };
+    }
+    if (req.query.author) {
+      filter.author = { $regex: req.query.author, $options: 'i' };
+    }
+    if (req.query.genre) {
+      filter.genre = { $regex: req.query.genre, $options: 'i' };
+    }
+
+    const books = await Book.find(filter);
+
+    if (books.length === 0) {
+      return res.status(404).json({ message: 'No books found' });
+    }
+
+    res.json(books);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
 // Get book by custom ID
 exports.getBookByCustomId = async (req, res) => {
   try {
@@ -58,7 +85,6 @@ exports.getBookByCustomId = async (req, res) => {
 // Add book
 exports.addBook = async (req, res) => {
   try {
-    // Generate unique bookId
     let bookId;
     let isUnique = false;
 
