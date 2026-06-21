@@ -7,42 +7,90 @@ require('dotenv').config();
 const verifyToken = require('../shared/middleware/verifyToken');
 const authorizeRole = require('../shared/middleware/authorizeRole');
 
+// prevent gateway from crashing on proxy errors
+proxy.on('error', (err, req, res) => {
+  console.error('Proxy error:', err.message);
+  res.status(502).json({ message: 'Service unavailable' });
+});
+
 // Auth routes — no token needed
 app.use('/auth', (req, res) => {
   req.url = req.originalUrl;
-  console.log('API Gateway → Auth Service');
   proxy.web(req, res, { target: 'http://auth_service:3000' });
 });
 
-// Book routes — member + librarian
-app.use('/books', verifyToken, authorizeRole('member', 'librarian'), (req, res) => {
+// Get all books — member + librarian
+app.get('/books', verifyToken, authorizeRole('member', 'librarian'), (req, res) => {
   req.url = req.originalUrl;
-  console.log('API Gateway → Book Service (load balanced)');
   proxy.web(req, res, { target: 'http://nginx:8080' });
 });
 
-// Borrow routes — member only
-app.use('/borrow/borrow', verifyToken, authorizeRole('member'), (req, res) => {
+// Search books — member + librarian
+app.get('/books/search', verifyToken, authorizeRole('member', 'librarian'), (req, res) => {
+  req.url = req.originalUrl;
+  proxy.web(req, res, { target: 'http://nginx:8080' });
+});
+
+// Get one book — member + librarian
+app.get('/books/:bookId', verifyToken, authorizeRole('member', 'librarian'), (req, res) => {
+  req.url = req.originalUrl;
+  proxy.web(req, res, { target: 'http://nginx:8080' });
+});
+
+// Add book — librarian only
+app.post('/books', verifyToken, authorizeRole('librarian'), (req, res) => {
+  req.url = req.originalUrl;
+  proxy.web(req, res, { target: 'http://nginx:8080' });
+});
+
+// Edit book — librarian only
+app.patch('/books/:bookId', verifyToken, authorizeRole('librarian'), (req, res) => {
+  req.url = req.originalUrl;
+  proxy.web(req, res, { target: 'http://nginx:8080' });
+});
+
+// Delete book — librarian only
+app.delete('/books/:bookId', verifyToken, authorizeRole('librarian'), (req, res) => {
+  req.url = req.originalUrl;
+  proxy.web(req, res, { target: 'http://nginx:8080' });
+});
+
+// Increase/decrease copies — librarian only
+app.patch('/books/:bookId/increase', verifyToken, authorizeRole('librarian'), (req, res) => {
+  req.url = req.originalUrl;
+  proxy.web(req, res, { target: 'http://nginx:8080' });
+});
+
+app.patch('/books/:bookId/decrease', verifyToken, authorizeRole('librarian'), (req, res) => {
+  req.url = req.originalUrl;
+  proxy.web(req, res, { target: 'http://nginx:8080' });
+});
+
+// Borrow a book — member + librarian
+app.use('/borrow/borrow', verifyToken, authorizeRole('member', 'librarian'), (req, res) => {
   req.url = req.originalUrl;
   proxy.web(req, res, { target: 'http://borrow_service:3002' });
 });
 
-app.use('/borrow/return', verifyToken, authorizeRole('member'), (req, res) => {
+// Return a book — member + librarian
+app.use('/borrow/return', verifyToken, authorizeRole('member', 'librarian'), (req, res) => {
   req.url = req.originalUrl;
   proxy.web(req, res, { target: 'http://borrow_service:3002' });
 });
 
-app.use('/borrow/history', verifyToken, authorizeRole('member'), (req, res) => {
+// Own borrow history — member + librarian
+app.use('/borrow/history', verifyToken, authorizeRole('member', 'librarian'), (req, res) => {
   req.url = req.originalUrl;
   proxy.web(req, res, { target: 'http://borrow_service:3002' });
 });
 
-// Borrow routes — librarian only
+// All borrowings — librarian only
 app.use('/borrow/all', verifyToken, authorizeRole('librarian'), (req, res) => {
   req.url = req.originalUrl;
   proxy.web(req, res, { target: 'http://borrow_service:3002' });
 });
 
+// Overdue books — librarian only
 app.use('/borrow/overdue', verifyToken, authorizeRole('librarian'), (req, res) => {
   req.url = req.originalUrl;
   proxy.web(req, res, { target: 'http://borrow_service:3002' });

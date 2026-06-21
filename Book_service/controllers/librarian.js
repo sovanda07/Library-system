@@ -19,13 +19,13 @@ exports.getAllBooks = async (req, res) => {
 // Get one book by custom bookId
 exports.getBook = async (req, res) => {
   try {
-    const cached = await redis.get(`book_${req.params.id}`);
+    const cached = await redis.get(`book_${req.params.bookId}`);
     if (cached) {
       return res.json(JSON.parse(cached));
     }
-    const book = await Book.findOne({ bookId: req.params.id });
+    const book = await Book.findOne({ bookId: req.params.bookId });
     if (!book) return res.status(404).json({ message: 'Book not found' });
-    await redis.set(`book_${req.params.id}`, JSON.stringify(book), 'EX', 3600);
+    await redis.set(`book_${req.params.bookId}`, JSON.stringify(book), 'EX', 3600);
     res.json(book);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -90,7 +90,7 @@ exports.addBook = async (req, res) => {
 exports.editBook = async (req, res) => {
   try {
     const book = await Book.findOneAndUpdate(
-      { bookId: req.params.id },
+      { bookId: req.params.bookId },
       req.body,
       { new: true }
     );
@@ -106,7 +106,7 @@ exports.editBook = async (req, res) => {
 // Delete book by custom bookId
 exports.deleteBook = async (req, res) => {
   try {
-    const book = await Book.findOneAndDelete({ bookId: req.params.id });
+    const book = await Book.findOneAndDelete({ bookId: req.params.bookId });
     if (!book) return res.status(404).json({ message: 'Book not found' });
     await redis.del('all_books');
     await redis.del(`book_${req.params.id}`);

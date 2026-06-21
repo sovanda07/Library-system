@@ -19,11 +19,11 @@ exports.getAllBooks = async (req, res) => {
 // Get one book by custom bookId
 exports.getBook = async (req, res) => {
   try {
-    const cached = await redis.get(`book_${req.params.id}`);
+    const cached = await redis.get(`book_${req.params.bookId}`);
     if (cached) {
       return res.json(JSON.parse(cached));
     }
-    const book = await Book.findOne({ bookId: req.params.id });
+    const book = await Book.findOne({ bookId: req.params.bookId });
     if (!book) return res.status(404).json({ message: 'Book not found' });
     await redis.set(`book_${req.params.id}`, JSON.stringify(book), 'EX', 3600);
     res.json(book);
