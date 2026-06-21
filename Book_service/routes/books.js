@@ -1,32 +1,32 @@
 const express = require('express');
 const router = express.Router();
-const verifyToken = require('../../shared/middleware/verifyToken');
-const authorizeRole = require('../../shared/middleware/authorizeRole');
 const librarian = require('../controllers/librarian');
 const member = require('../controllers/member');
-const Book = require('../models/Books'); // add this at top if not there
+const Book = require('../models/Books');
 
-// Shared routes (Both Members and Librarians)
-router.get('/', verifyToken, authorizeRole('member', 'librarian'), librarian.getAllBooks);
+// Get all books
+router.get('/', librarian.getAllBooks);
 
-// At lines 11-13 of routes/books.js
-router.get('/search', verifyToken, authorizeRole('member', 'librarian'), member.searchBooks);
+// Search books — must be before /:bookId
+router.get('/search', member.searchBooks);
 
-// 2. Generic wildcard route goes SECOND
-router.get('/:id', verifyToken, authorizeRole('member', 'librarian'), member.getBook);
-router.get('/find/:bookId', verifyToken, authorizeRole('member', 'librarian'), librarian.getBookByCustomId);
+// Get one book
+router.get('/:bookId', librarian.getBook);
 
+// Add book
+router.post('/', librarian.addBook);
 
-// Librarian only routes
-router.post('/', verifyToken, authorizeRole('librarian'), librarian.addBook);
-router.patch('/:id', verifyToken, authorizeRole('librarian'), librarian.editBook);
-router.delete('/:id', verifyToken, authorizeRole('librarian'), librarian.deleteBook);
+// Edit book
+router.patch('/:bookId', librarian.editBook);
 
-// Internal routes for Borrow_service
-router.patch('/:id/decrease', async (req, res) => {
+// Delete book
+router.delete('/:bookId', librarian.deleteBook);
+
+// Internal routes for Borrow_service — no auth needed
+router.patch('/:bookId/decrease', async (req, res) => {
   try {
-    const book = await Book.findByIdAndUpdate(
-      req.params.id,
+    const book = await Book.findOneAndUpdate(
+      { bookId: req.params.bookId },
       { $inc: { availableCopies: -1 } },
       { new: true }
     );
@@ -36,10 +36,10 @@ router.patch('/:id/decrease', async (req, res) => {
   }
 });
 
-router.patch('/:id/increase', async (req, res) => {
+router.patch('/:bookId/increase', async (req, res) => {
   try {
-    const book = await Book.findByIdAndUpdate(
-      req.params.id,
+    const book = await Book.findOneAndUpdate(
+      { bookId: req.params.bookId },
       { $inc: { availableCopies: 1 } },
       { new: true }
     );

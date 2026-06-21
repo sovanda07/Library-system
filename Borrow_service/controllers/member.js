@@ -5,14 +5,12 @@ const BOOK_SERVICE_URL = process.env.BOOK_SERVICE_URL;
 // Borrow a book
 exports.borrowBook = async (req, res) => {
   try {
-    const bookResponse = await fetch(`${BOOK_SERVICE_URL}/books/find/${req.body.bookId}`, {
-      headers: {
-        'Authorization': req.headers.authorization
-      }
-    });
-    const book = await bookResponse.json();
+    const url = `${BOOK_SERVICE_URL}/books/${req.body.bookId}`;
+    const bookResponse = await fetch(url);
 
     if (!bookResponse.ok) return res.status(404).json({ message: 'Book not found' });
+
+    const book = await bookResponse.json();
 
     if (book.availableCopies === 0) {
       return res.status(400).json({ message: 'No copies available' });
@@ -37,13 +35,28 @@ exports.borrowBook = async (req, res) => {
     });
     await borrow.save();
 
-    await fetch(`${BOOK_SERVICE_URL}/books/${book._id}/decrease`, {
+    await fetch(`${BOOK_SERVICE_URL}/books/${req.body.bookId}/decrease`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
     });
 
-    res.status(201).json({ message: 'Book borrowed successfully', borrow });
+    res.status(201).json({
+      message: 'Book borrowed successfully',
+      borrow: {
+        _id: borrow._id,
+        memberId: borrow.memberId,
+        name: req.user.name,
+        email: req.user.email,
+        bookId: borrow.bookId,
+        bookTitle: book.title,
+        borrowDate: borrow.borrowDate,
+        dueDate: borrow.dueDate,
+        returnDate: borrow.returnDate,
+        status: borrow.status,
+      }
+    });
   } catch (err) {
+    console.error('Borrow error:', err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -58,25 +71,18 @@ exports.returnBook = async (req, res) => {
     });
     if (!borrow) return res.status(404).json({ message: 'No active borrow found' });
 
-    // Update borrow record
     borrow.returnDate = new Date();
     borrow.status = 'returned';
     await borrow.save();
 
-    // Get MongoDB _id from book service
-    const bookResponse = await fetch(`${BOOK_SERVICE_URL}/books/find/${req.params.bookId}`, {
-      headers: { 'Authorization': req.headers.authorization }
-    });
-    const book = await bookResponse.json();
-
-    // Call Book_service to increase availableCopies by 1
-    await fetch(`${BOOK_SERVICE_URL}/books/${book._id}/increase`, {
+    await fetch(`${BOOK_SERVICE_URL}/books/${req.params.bookId}/increase`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
     });
 
     res.json({ message: 'Book returned successfully', borrow });
   } catch (err) {
+    console.error('Return error:', err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -86,12 +92,9 @@ exports.myHistory = async (req, res) => {
   try {
     const history = await Borrow.find({ memberId: req.user.memberId });
 
-    // Fetch book details for each borrow record
     const historyWithBooks = await Promise.all(
       history.map(async (borrow) => {
-        const bookResponse = await fetch(`${BOOK_SERVICE_URL}/books/find/${borrow.bookId}`, {
-          headers: { 'Authorization': req.headers.authorization }
-        });
+        const bookResponse = await fetch(`${BOOK_SERVICE_URL}/books/${borrow.bookId}`);
         const book = await bookResponse.json();
 
         return {
@@ -116,6 +119,7 @@ exports.myHistory = async (req, res) => {
 
     res.json(historyWithBooks);
   } catch (err) {
+    console.error('History error:', err);
     res.status(500).json({ message: err.message });
   }
 };
