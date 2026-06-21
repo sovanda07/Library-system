@@ -19,7 +19,7 @@ proxy.on('error', (err, req, res) => {
 // POST /auth/forgot-password
 // POST /auth/reset-password
 app.use('/auth', (req, res) => {
-  req.url = req.originalUrl;
+  req.url = req.originalUrl.replace('/auth', '')
   proxy.web(req, res, { target: 'http://auth_service:3000' });
 });
 

@@ -79,7 +79,7 @@ services:
     environment:
       - MONGO_URI=${MONGO_URI}
       - JWT_SECRET=${JWT_SECRET}
-      - BOOK_SERVICE_URL=http://nginx:8080
+      - BOOK_SERVICE_URL=http://nginx:80
     depends_on:
       - book_service_1
       - book_service_2
