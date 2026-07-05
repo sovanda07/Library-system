@@ -1,10 +1,32 @@
 # Kubernetes deployment for the library system
 
-## 1. Build and push container images
+This guide shows the full step-by-step deployment process for the project using YAML manifests.
+
+## 1. Prerequisites
+
+Make sure you have:
+- Docker installed and running
+- kubectl installed
+- a Kubernetes cluster available
+- access to a container registry such as Docker Hub
+
+### Local cluster options
+If you are using Docker Desktop with Kubernetes enabled:
+```bash
+kubectl get nodes
+```
+
+If you are using Minikube:
+```bash
+minikube start
+kubectl get nodes
+```
+
+## 2. Build and push container images
 
 The manifests use a `library-sys-` prefix so they are less likely to collide with other team deployments in the same cluster. If you need a different prefix, replace it in the YAML files before applying them.
 
-From the project root, build the images and push them to a registry such as Docker Hub:
+From the project root, build the images and push them to your registry:
 
 ```bash
 docker build -t <your-docker-username>/api-gateway:latest -f API_Gateway/Dockerfile .
@@ -18,11 +40,11 @@ docker push <your-docker-username>/book-service:latest
 docker push <your-docker-username>/borrow-service:latest
 ```
 
-Replace the image values in the deployment YAML files with the exact image names you pushed.
+Then replace the image values in the deployment YAML files with the exact image names you pushed.
 
-## 2. Apply the manifests
+## 3. Create secrets for sensitive values
 
-Before applying, update the secret values for your environment:
+Do not commit your real credentials to GitHub. Inject them in secrets.yaml file at deployment time:
 
 ```bash
 kubectl create secret generic library-secrets -n library-system \
@@ -30,7 +52,7 @@ kubectl create secret generic library-secrets -n library-system \
   --from-literal=MONGO_URI='<your-mongodb-atlas-uri>'
 ```
 
-Then apply the manifests:
+## 4. Apply the Kubernetes manifests
 
 ```bash
 kubectl apply -f k8s/namespace.yaml
@@ -44,18 +66,45 @@ kubectl apply -f k8s/api-gateway.yaml
 kubectl apply -f k8s/ingress.yaml
 ```
 
-## 3. Verify the rollout
+## 5. Verify the rollout
 
 ```bash
 kubectl get pods -n library-system
 kubectl get svc -n library-system
-kubectl logs -n library-system deploy/api-gateway
+kubectl get ingress -n library-system
 ```
 
-## 4. Access the app
-
-If you are using a cloud provider with a load balancer, open the external IP of the api-gateway service:
+If a pod is not ready, inspect its logs:
 
 ```bash
-kubectl get svc api-gateway -n library-system
+kubectl logs -n library-system deploy/library-sys-api-gateway
+kubectl logs -n library-system deploy/library-sys-auth-service
+kubectl logs -n library-system deploy/library-sys-book-service
+kubectl logs -n library-system deploy/library-sys-borrow-service
+```
+
+## 6. Access the application
+
+### Option A: Service access
+If you are using a cloud provider or Minikube tunnel, you can access the gateway service directly:
+
+```bash
+kubectl get svc -n library-system
+```
+
+### Option B: Ingress access
+If your cluster has an ingress controller installed, use the ingress host:
+
+```bash
+kubectl get ingress -n library-system
+```
+
+## 7. Troubleshooting
+
+If deployment fails, check:
+```bash
+kubectl describe pod -n library-system -l app=library-sys-api-gateway
+kubectl describe pod -n library-system -l app=library-sys-auth-service
+kubectl describe pod -n library-system -l app=library-sys-book-service
+kubectl describe pod -n library-system -l app=library-sys-borrow-service
 ```
