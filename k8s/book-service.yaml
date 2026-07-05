@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: library-sys-book-service
+  namespace: library-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: library-sys-book-service
+  template:
+    metadata:
+      labels:
+        app: library-sys-book-service
+    spec:
+      containers:
+        - name: library-sys-book-service
+          image: <your-docker-username>/library-sys-book-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3001
+          envFrom:
+            - configMapRef:
+                name: library-config
+            - secretRef:
+                name: library-secrets
+          env:
+            - name: PORT
+              value: "3001"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: library-sys-book-service
+  namespace: library-system
+spec:
+  selector:
+    app: library-sys-book-service
+  ports:
+    - port: 3001
+      targetPort: 3001

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: library-config
+  namespace: library-system
+data:
+  REDIS_HOST: "library-sys-redis"
+  REDIS_PORT: "6379"
+  AUTH_SERVICE_URL: "http://library-sys-auth-service:3000"
+  BOOK_SERVICE_URL: "http://library-sys-book-service:3001"
+  BORROW_SERVICE_URL: "http://library-sys-borrow-service:3002"
