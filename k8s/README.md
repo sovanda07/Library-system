@@ -29,15 +29,15 @@ The manifests use a `library-sys-` prefix so they are less likely to collide wit
 From the project root, build the images and push them to your registry:
 
 ```bash
-docker build -t <your-docker-username>/api-gateway:latest -f API_Gateway/Dockerfile .
-docker build -t <your-docker-username>/auth-service:latest -f Auth_service/Dockerfile .
-docker build -t <your-docker-username>/book-service:latest -f Book_service/Dockerfile .
-docker build -t <your-docker-username>/borrow-service:latest -f Borrow_service/Dockerfile .
+docker build -t <your-docker-username>/library-sys-api-gateway:latest -f API_Gateway/Dockerfile .
+docker build -t <your-docker-username>/library-sys-auth-service:latest -f Auth_service/Dockerfile .
+docker build -t <your-docker-username>/library-sys-book-service:latest -f Book_service/Dockerfile .
+docker build -t <your-docker-username>/library-sys-borrow-service:latest -f Borrow_service/Dockerfile .
 
-docker push <your-docker-username>/api-gateway:latest
-docker push <your-docker-username>/auth-service:latest
-docker push <your-docker-username>/book-service:latest
-docker push <your-docker-username>/borrow-service:latest
+docker push <your-docker-username>/library-sys-api-gateway:latest
+docker push <your-docker-username>/library-sys-auth-service:latest
+docker push <your-docker-username>/library-sys-book-service:latest
+docker push <your-docker-username>/library-sys-borrow-service:latest
 ```
 
 Then replace the image values in the deployment YAML files with the exact image names you pushed.
@@ -58,17 +58,25 @@ kubectl create secret generic library-secrets -n library-system \
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/configmap.yaml
 kubectl apply -f k8s/mongo.yaml
+kubectl apply -f k8s/mongo-pvc.yaml
 kubectl apply -f k8s/redis.yaml
+kubectl apply -f k8s/shared-logs.yaml
 kubectl apply -f k8s/auth-service.yaml
 kubectl apply -f k8s/book-service.yaml
 kubectl apply -f k8s/borrow-service.yaml
 kubectl apply -f k8s/api-gateway.yaml
-kubectl apply -f k8s/ingress.yaml
+kubectl apply -f k8s/ingress.yaml 
+```
+
+or simply 
+```bash
+kubectl apply -f k8s/
 ```
 
 ## 5. Verify the rollout
 
 ```bash
+kubectl get pvc -n library-system
 kubectl get pods -n library-system
 kubectl get svc -n library-system
 kubectl get ingress -n library-system
