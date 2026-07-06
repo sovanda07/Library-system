@@ -1,6 +1,6 @@
 # Library System - Microservices Architecture
 
-A cloud-native, microservices-based Library Management System built with Node.js, Express, MongoDB, and Docker. The system demonstrates modern distributed architecture patterns with API Gateway routing, service-to-service communication, and role-based access control.
+A cloud-native, microservices-based Library Management System built with Node.js, Express, MongoDB, and Docker. The system demonstrates modern distributed architecture patterns with API Gateway routing, Kubernetes orchestration, and service-to-service communication.
 
 ## 📋 Table of Contents
 
@@ -11,6 +11,7 @@ A cloud-native, microservices-based Library Management System built with Node.js
 - [Prerequisites](#prerequisites)
 - [Setup & Installation](#setup--installation)
 - [Running the Project](#running-the-project)
+- [Load Balancing](#load-balancing)
 - [API Documentation](#api-documentation)
 - [Environment Variables](#environment-variables)
 - [Project Structure](#project-structure)
@@ -38,7 +39,30 @@ docker compose up --build
 
 # 4. Access the API
 # Gateway: http://localhost:4000
-# Book Service: http://localhost:8080
+```
+
+### With Kubernetes
+```bash
+# 1. Create namespace and secrets
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/secrets.yaml
+kubectl apply -f k8s/configmap.yaml
+
+# 2. Deploy databases
+kubectl apply -f k8s/mongo.yaml
+kubectl apply -f k8s/redis.yaml
+
+# 3. Deploy services
+kubectl apply -f k8s/auth-service.yaml
+kubectl apply -f k8s/book-service.yaml
+kubectl apply -f k8s/borrow-service.yaml
+kubectl apply -f k8s/api-gateway.yaml
+
+# 4. Deploy ingress
+kubectl apply -f k8s/ingress.yaml
+
+# 5. Get API endpoint
+kubectl get ingress -n library-system
 ```
 
 ### Without Docker (Local Development)
@@ -93,50 +117,40 @@ This is a **microservices architecture** with the following components:
        │
        ▼
 ┌──────────────────┐
-│  API Gateway     │ (Port 4000)
-│  (Express)       │
-└──────┬──────────┬┬──────────┐
-       │          ││          │
-       ▼          ▼▼          ▼
+│  API Gateway     │
+│  (Express.js)    │
+└──────┬──────┬────┬────────┐
+       │      │    │        │
+       ▼      ▼    ▼        ▼
 ┌────────────┐ ┌─────────────┐ ┌────────────┐
-│   Auth     │ │   Nginx     │ │   Borrow   │
-│  Service   │ │ Load Bal.   │ │  Service   │
-│(Port 3000) │ │(Port 8080)  │ │(Port 5000) │
-└────────────┘ │             │ └────────────┘
-               │  ┌─────────┐│
-               │  │ Book    ││
-               │  │Service 1││
-               │  │(Port 5001)│
-               │  └─────────┘│
-               │  ┌─────────┐│
-               │  │ Book    ││
-               │  │Service 2││
-               │  │(Port 5002)││
-               │  └─────────┘│
-               └─────────────┘
-       │
-       ▼
-┌──────────────────┐
-│  MongoDB         │
-│  (Database)      │
-└──────────────────┘
-       │
-       ▼
-┌──────────────────┐
-│  Redis           │
-│  (Cache)         │
-└──────────────────┘
+│   Auth     │ │   Book      │ │   Borrow   │
+│  Service   │ │  Service    │ │  Service   │
+│  (Pods)    │ │  (Pods)     │ │  (Pods)    │
+└────────────┘ └─────────────┘ └────────────┘
+       │              │              │
+       └──────────────┼──────────────┘
+                      ▼
+              ┌──────────────────┐
+              │  MongoDB         │
+              │  (StatefulSet)   │
+              └──────────────────┘
+              ┌──────────────────┐
+              │  Redis           │
+              │  (Deployment)    │
+              └──────────────────┘
 ```
 
 ### Key Design Patterns
 
 - **API Gateway Pattern**: Single entry point for all client requests
-- **Load Balancing**: Nginx distributes traffic across multiple Book Service instances
+- **Kubernetes Orchestration**: Container orchestration with auto-scaling
 - **Service-to-Service Communication**: Direct HTTP calls between services
 - **Authentication**: JWT token-based authentication with role-based access control (RBAC)
-- **Containerization**: Docker containers for each service with Docker Compose orchestration
+- **Containerization**: Docker containers for each service
 - **Caching**: Redis for performance optimization in Book Service
-- **Data Persistence**: MongoDB for all services
+- **Data Persistence**: MongoDB with StatefulSet for data durability
+- **Service Discovery**: Kubernetes DNS for automatic service discovery
+- **Load Balancing**: Nginx (Docker), Kubernetes Services (K8s)
 
 ## 📦 Services
 
@@ -172,7 +186,7 @@ This is a **microservices architecture** with the following components:
 
 ---
 
-### 3. **Book Service** (Dual instances - Ports 5001 & 5002)
+### 3. **Book Service** (Multiple instances)
 **Purpose**: Manage library book catalog with search, filtering, and book operations.
 
 **Routes**:
@@ -190,6 +204,10 @@ This is a **microservices architecture** with the following components:
 - Book metadata (title, author, ISBN, count, etc.)
 
 **Technology**: Express.js, MongoDB, Redis (ioredis), JWT
+
+**Load Balancing**:
+- **Docker**: 2 instances behind Nginx load balancer (round-robin)
+- **Kubernetes**: Multiple replicas managed by Kubernetes Service
 
 ---
 
@@ -223,13 +241,17 @@ This is a **microservices architecture** with the following components:
 
 ---
 
-### 6. **Nginx Load Balancer** (Port 8080)
-**Purpose**: Distributes traffic across multiple Book Service instances.
+### 6. **MongoDB** (Port 27017)
+**Purpose**: Primary data persistence layer for all services.
 
-**Configuration**: 
-- Upstream balancing across Book Service instances
-- Round-robin request distribution
-- Reverse proxy to backend services
+**Kubernetes**: StatefulSet with persistent volumes for data durability
+
+---
+
+### 7. **Redis** (Port 6379)
+**Purpose**: Caching and session storage for performance optimization.
+
+**Kubernetes**: Deployment with persistent volume for cache data
 
 ---
 
@@ -243,8 +265,9 @@ This is a **microservices architecture** with the following components:
 | **Caching** | Redis |
 | **Authentication** | JWT (jsonwebtoken), Bcrypt |
 | **Containerization** | Docker, Docker Compose |
-| **Load Balancing** | Nginx |
-| **Environment Management** | dotenv |
+| **Orchestration** | Kubernetes 1.28+ |
+| **Load Balancing** | Nginx (Docker), Kubernetes Services (K8s) |
+| **Environment Management** | dotenv, ConfigMaps, Secrets |
 
 ## 📋 Prerequisites
 
@@ -253,9 +276,11 @@ Before starting, ensure you have:
 - **Node.js** (v18+)
 - **npm** (v8+)
 - **Docker** (v20.10+)
-- **Docker Compose** (v1.29+)
-- **MongoDB** (v5.0+) - or use Docker
-- **Redis** (v6.0+) - or use Docker
+- **Docker Compose** (v1.29+) - for Docker deployment
+- **Kubernetes** (v1.28+) - for K8s deployment
+- **kubectl** (v1.28+) - Kubernetes CLI
+- **MongoDB** (v5.0+) - or use Docker/Kubernetes
+- **Redis** (v6.0+) - or use Docker/Kubernetes
 - **Git**
 
 ## 🚀 Setup & Installation
@@ -330,7 +355,7 @@ EOF
 
 ## ▶️ Running the Project
 
-### Option 1: Using Docker Compose (Recommended)
+### Option 1: Using Docker Compose (Recommended for Local Testing)
 
 ```bash
 # Build and start all services
@@ -348,9 +373,118 @@ docker compose down
 
 The API Gateway will be available at `http://localhost:4000`
 
+**Note**: Docker Compose includes an Nginx reverse proxy that load balances the Book Service (2 instances).
+
 ---
 
-### Option 2: Running Locally (Development)
+### Option 2: Kubernetes Deployment
+
+#### Prerequisites
+- Kubernetes cluster running (local: Minikube, Kind; cloud: EKS, GKE, AKS)
+- kubectl configured and connected to your cluster
+- Persistent volume provisioner available (for MongoDB and Redis)
+
+#### Deployment Steps
+
+**Step 1: Create Namespace**
+```bash
+kubectl apply -f k8s/namespace.yaml
+```
+
+**Step 2: Create Secrets and ConfigMaps**
+```bash
+kubectl apply -f k8s/secrets.yaml
+kubectl apply -f k8s/configmap.yaml
+```
+
+**Step 3: Deploy Databases**
+```bash
+kubectl apply -f k8s/mongo.yaml
+kubectl apply -f k8s/redis.yaml
+
+# Wait for databases to be ready
+kubectl rollout status statefulset/mongo -n library-system
+kubectl rollout status deployment/redis -n library-system
+```
+
+**Step 4: Deploy Microservices**
+```bash
+kubectl apply -f k8s/auth-service.yaml
+kubectl apply -f k8s/book-service.yaml
+kubectl apply -f k8s/borrow-service.yaml
+kubectl apply -f k8s/api-gateway.yaml
+
+# Wait for services to be ready
+kubectl rollout status deployment/auth-service -n library-system
+kubectl rollout status deployment/book-service -n library-system
+kubectl rollout status deployment/borrow-service -n library-system
+kubectl rollout status deployment/api-gateway -n library-system
+```
+
+**Step 5: Deploy Ingress**
+```bash
+kubectl apply -f k8s/ingress.yaml
+
+# Get Ingress URL
+kubectl get ingress -n library-system
+kubectl describe ingress api-gateway-ingress -n library-system
+```
+
+#### Accessing the Application
+
+```bash
+# Get service endpoints
+kubectl get svc -n library-system
+
+# Port forward to access locally (alternative to Ingress)
+kubectl port-forward svc/api-gateway 4000:4000 -n library-system
+
+# Then access at http://localhost:4000
+```
+
+#### Monitoring and Debugging
+
+```bash
+# View pod status
+kubectl get pods -n library-system
+
+# View pod logs
+kubectl logs -f pod/auth-service-xyz -n library-system
+
+# Describe pod for events
+kubectl describe pod auth-service-xyz -n library-system
+
+# Access pod shell
+kubectl exec -it pod/auth-service-xyz -n library-system -- sh
+
+# Check resource usage
+kubectl top pods -n library-system
+```
+
+#### Scaling Services
+
+```bash
+# Scale auth-service to 5 replicas
+kubectl scale deployment auth-service --replicas=5 -n library-system
+
+# Check HPA (Horizontal Pod Autoscaler)
+kubectl get hpa -n library-system
+kubectl describe hpa book-service-hpa -n library-system
+```
+
+#### Cleanup
+
+```bash
+# Delete all resources in namespace
+kubectl delete namespace library-system
+
+# Or delete individual components
+kubectl delete -f k8s/
+```
+
+---
+
+### Option 3: Running Locally (Development)
 
 #### Terminal 1: Auth Service
 ```bash
@@ -387,6 +521,99 @@ npm start
 **Prerequisites for local setup**:
 - Ensure MongoDB is running: `mongod`
 - Ensure Redis is running: `redis-server`
+
+---
+
+## ⚖️ Load Balancing
+
+The system uses different load balancing strategies depending on the deployment method:
+
+### Docker Compose: Nginx Load Balancer
+
+**What**: Nginx reverse proxy distributes traffic across multiple Book Service instances
+
+**How it works**:
+```
+Borrow Service → http://nginx:80 → [Nginx Round-Robin] → Book Service 1
+                                                        → Book Service 2
+```
+
+**Configuration** (`nginx.conf`):
+```nginx
+upstream book_service {
+  server book_service_1:3001;
+  server book_service_2:3001;
+}
+
+server {
+  listen 80;
+  location / {
+    proxy_pass http://book_service;
+  }
+}
+```
+
+**Usage in `docker-compose.yml`**:
+- Nginx service runs on port 8080
+- Borrow Service calls: `BOOK_SERVICE_URL=http://nginx:80`
+- Nginx forwards requests to Book Service instances
+
+**Benefits**:
+- Simple round-robin load balancing
+- Easy to add/remove book service instances
+- Traffic distribution across replicas
+
+---
+
+### Kubernetes: Native Service Load Balancing
+
+**What**: Kubernetes Services provide built-in load balancing (no Nginx needed)
+
+**How it works**:
+```
+Borrow Service → http://book-service:3001 → [K8s Service] → Book Service Pod 1
+                                                           → Book Service Pod 2
+                                                           → Book Service Pod N
+```
+
+**Service Configuration** (`k8s/book-service.yaml`):
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: book-service
+spec:
+  selector:
+    app: book-service
+  ports:
+    - port: 3001
+      targetPort: 3001
+```
+
+**Usage in services**:
+- Services use Kubernetes DNS: `http://book-service:3001`
+- Kubernetes automatically routes to available pods
+- Default algorithm: round-robin
+
+**Benefits**:
+- Native Kubernetes load balancing
+- Automatic failover if pods crash
+- Service discovery via DNS
+- HPA automatically scales pods based on metrics
+- No external load balancer needed
+
+---
+
+### Comparison
+
+| Feature | Docker (Nginx) | Kubernetes |
+|---------|---|---|
+| **Load Balancer** | Nginx container | Kubernetes Service |
+| **Discovery** | Manual DNS | Automatic DNS |
+| **Scaling** | Manual pod addition | HPA auto-scaling |
+| **Failover** | Manual | Automatic |
+| **Config** | nginx.conf file | Service manifest |
+| **Setup Complexity** | Simple | More infrastructure |
 
 ---
 
@@ -633,6 +860,16 @@ Response: 200 OK
 | `MONGO_URI` | MongoDB connection string | `mongodb://localhost:27017/library_system` |
 | `DOCKER_USERNAME` | Docker Hub username for image registry | `your-docker-username` |
 
+### Kubernetes Configuration
+
+**ConfigMap** (`k8s/configmap.yaml`):
+- `MONGO_URI`: `mongodb://mongo:27017/library_system`
+- `REDIS_HOST`: `redis`
+- `REDIS_PORT`: `6379`
+
+**Secrets** (`k8s/secrets.yaml`):
+- `JWT_SECRET`: Base64 encoded secret key
+
 ### Service-Specific Environment Variables
 
 **Auth Service & All Services**:
@@ -644,10 +881,8 @@ Response: 200 OK
 - `REDIS_PORT` - Redis server port (default: `6379`)
 
 **Borrow Service**:
-- `BOOK_SERVICE_URL` - URL to Book Service (default: `http://nginx:8080`)
-
-**API Gateway**:
-- `JWT_SECRET` - JWT secret for token verification
+- **Docker**: `BOOK_SERVICE_URL=http://nginx:80` (routes through Nginx)
+- **Kubernetes**: `BOOK_SERVICE_URL=http://book-service:3001` (routes through K8s Service)
 
 ---
 
@@ -657,63 +892,58 @@ Response: 200 OK
 Library_System/
 ├── API_Gateway/              # API Gateway Service
 │   ├── Dockerfile
-│   ├── index.js             # Gateway routing logic
+│   ├── index.js
 │   ├── package.json
 │   └── README.md
 │
-├── Auth_service/            # Authentication Service
+├── Auth_service/             # Authentication Service
 │   ├── Dockerfile
 │   ├── server.js
 │   ├── package.json
 │   ├── config/
-│   │   └── db.js           # MongoDB connection
 │   ├── models/
-│   │   └── Users.js        # User schema
 │   └── routes/
-│       ├── login.js        # Login endpoint
-│       ├── registration.js # Register endpoint
-│       └── resetPassword.js # Password reset endpoint
 │
-├── Book_service/            # Book Management Service
+├── Book_service/             # Book Management Service
 │   ├── Dockerfile
 │   ├── server.js
 │   ├── package.json
 │   ├── config/
-│   │   ├── db.js           # MongoDB connection
-│   │   └── redis.js        # Redis connection
 │   ├── models/
-│   │   └── Books.js        # Book schema
 │   ├── controllers/
-│   │   ├── librarian.js    # Librarian operations
-│   │   └── member.js       # Member operations
 │   └── routes/
-│       └── books.js        # Book routes
 │
-├── Borrow_service/          # Borrow Management Service
+├── Borrow_service/           # Borrow Management Service
 │   ├── Dockerfile
 │   ├── server.js
 │   ├── package.json
 │   ├── config/
-│   │   └── db.js           # MongoDB connection
 │   ├── models/
-│   │   └── Borrow.js       # Borrow schema
 │   ├── controllers/
-│   │   ├── librarian.js    # Librarian operations
-│   │   └── member.js       # Member operations
 │   └── routes/
-│       └── borrow.js       # Borrow routes
 │
-├── shared/                  # Shared Middleware & Utilities
+├── shared/                   # Shared Middleware
 │   ├── package.json
 │   └── middleware/
-│       ├── verifyToken.js  # JWT verification middleware
-│       └── authorizeRole.js # Role authorization middleware
 │
-├── docker-compose.yml       # Docker Compose configuration
-├── nginx.conf              # Nginx load balancer config
-├── .env                    # Environment variables
-├── .env.example            # Example environment variables
-├── README.md               # This file
+├── k8s/                      # Kubernetes Manifests
+│   ├── README.md
+│   ├── namespace.yaml
+│   ├── secrets.yaml
+│   ├── configmap.yaml
+│   ├── mongo.yaml
+│   ├── redis.yaml
+│   ├── auth-service.yaml
+│   ├── book-service.yaml
+│   ├── borrow-service.yaml
+│   ├── api-gateway.yaml
+│   └── ingress.yaml
+│
+├── docker-compose.yml        # Docker Compose (with Nginx)
+├── nginx.conf                # Nginx load balancer config
+├── .env                      # Environment variables
+├── .env.example
+├── README.md
 └── .gitignore
 ```
 
@@ -724,7 +954,6 @@ Library_System/
 ### 1. Local Development Setup
 
 ```bash
-# Install all dependencies
 npm install --prefix API_Gateway
 npm install --prefix Auth_service
 npm install --prefix Book_service
@@ -734,7 +963,6 @@ npm install --prefix shared
 
 ### 2. Start Services Locally
 
-**Using multiple terminals:**
 ```bash
 # Terminal 1
 npm run dev --prefix Auth_service
@@ -751,33 +979,18 @@ npm start --prefix API_Gateway
 
 ### 3. Testing API Endpoints
 
-Use tools like:
-- **Postman** - GUI-based API testing
-- **cURL** - Command-line API testing
-- **Insomnia** - Alternative to Postman
-- **VS Code REST Client** - Inline REST requests
-
-Example with cURL:
 ```bash
 # Register
 curl -X POST http://localhost:4000/auth/register \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123",
-    "name": "John Doe",
-    "role": "member"
-  }'
+  -d '{"email":"user@example.com","password":"password123","name":"John Doe","role":"member"}'
 
 # Login
 curl -X POST http://localhost:4000/auth/login \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123"
-  }'
+  -d '{"email":"user@example.com","password":"password123"}'
 
-# Get Books (with token)
+# Get Books
 curl -X GET http://localhost:4000/books \
   -H "Authorization: Bearer <TOKEN>"
 ```
@@ -785,42 +998,48 @@ curl -X GET http://localhost:4000/books \
 ### 4. Docker Development
 
 ```bash
-# Build images
-docker compose build
-
-# Start services with logs
-docker compose up
-
-# Run in background
-docker compose up -d
+# Build and start
+docker compose up --build
 
 # View logs
-docker compose logs -f <service-name>
+docker compose logs -f
 
-# Stop services
+# Stop
 docker compose down
-
-# Remove volumes (reset database)
-docker compose down -v
 ```
 
-### 5. Debugging
+### 5. Kubernetes Development
 
-**View service logs:**
+```bash
+# Deploy
+kubectl apply -f k8s/
+
+# Check status
+kubectl get pods -n library-system
+
+# View logs
+kubectl logs -f deployment/auth-service -n library-system
+
+# Port forward
+kubectl port-forward svc/api-gateway 4000:4000 -n library-system
+
+# Clean up
+kubectl delete namespace library-system
+```
+
+### 6. Debugging
+
+**Docker Compose logs:**
 ```bash
 docker compose logs -f auth_service
 docker compose logs -f book_service_1
-docker compose logs -f api_gateway
+docker compose logs -f nginx
 ```
 
-**Check service health:**
+**Kubernetes pod logs:**
 ```bash
-docker compose ps
-```
-
-**Access service container:**
-```bash
-docker compose exec auth_service sh
+kubectl logs -f pod/auth-service-xyz -n library-system
+kubectl exec -it pod/auth-service-xyz -n library-system -- sh
 ```
 
 ---
@@ -829,24 +1048,26 @@ docker compose exec auth_service sh
 
 ✅ **Microservices Architecture** - Independent, scalable services  
 ✅ **API Gateway Pattern** - Centralized request routing  
-✅ **JWT Authentication** - Secure token-based authentication  
+✅ **JWT Authentication** - Secure token-based auth  
 ✅ **Role-Based Access Control** - Member and Librarian roles  
-✅ **Load Balancing** - Nginx distributes traffic  
+✅ **Load Balancing** - Nginx (Docker) + Kubernetes Services (K8s)  
+✅ **Auto-scaling** - HPA in Kubernetes  
+✅ **Service Discovery** - DNS-based discovery  
 ✅ **Caching Layer** - Redis for performance  
-✅ **Service-to-Service Communication** - Direct HTTP calls  
+✅ **Data Persistence** - MongoDB with StatefulSet  
 ✅ **Docker Containerization** - Consistent deployment  
-✅ **MongoDB Persistence** - Document-based database  
 ✅ **Error Handling** - Graceful error responses  
 
 ---
 
 ## 📝 Notes
 
-- **JWT Secret**: Change the `JWT_SECRET` in production to a strong, random value
-- **MongoDB Connection**: Ensure MongoDB is running and accessible at the configured URI
+- **JWT Secret**: Change in production to a strong, random value
+- **MongoDB Connection**: Ensure MongoDB is running and accessible
 - **Redis Cache**: Book Service requires Redis for optimal performance
-- **Network Isolation**: Services communicate through a Docker bridge network
-- **Port Mapping**: Only API Gateway exposes a port (4000) to the host
+- **Nginx (Docker only)**: Used for load balancing Book Service instances
+- **Kubernetes**: Uses native Services for load balancing (no Nginx needed)
+- **Port Mapping**: API Gateway on 4000, other services internal
 
 ---
 
@@ -867,46 +1088,57 @@ This project is licensed under the ISC License.
 
 ## ❓ Troubleshooting
 
-### Port Already in Use
-```bash
-# Find process using port
-lsof -i :4000
+### Docker Issues
 
-# Kill process
+**Port Already in Use**
+```bash
+lsof -i :4000
 kill -9 <PID>
 ```
 
-### MongoDB Connection Error
+**MongoDB Connection Error**
 ```bash
-# Ensure MongoDB is running
 mongod
-
-# Or start with Docker
+# or
 docker run -d -p 27017:27017 mongo
 ```
 
-### Redis Connection Error
+**Redis Connection Error**
 ```bash
-# Start Redis locally
 redis-server
-
-# Or start with Docker
+# or
 docker run -d -p 6379:6379 redis
 ```
 
-### Service Not Communicating
+**Nginx not forwarding requests**
 ```bash
-# Check Docker network
-docker network ls
-docker network inspect library-network
+docker compose logs nginx
+docker compose exec nginx curl http://book_service_1:3001
+```
 
-# Check service connectivity
-docker compose exec api_gateway ping auth_service
+### Kubernetes Issues
+
+**Pod Not Starting**
+```bash
+kubectl describe pod <pod-name> -n library-system
+kubectl logs <pod-name> -n library-system
+```
+
+**Service Not Accessible**
+```bash
+kubectl get svc -n library-system
+kubectl port-forward svc/api-gateway 4000:4000 -n library-system
+```
+
+**Persistent Volume Issues**
+```bash
+kubectl get pvc -n library-system
+kubectl describe pvc <pvc-name> -n library-system
 ```
 
 ---
 
-**Last Updated**: June 21, 2026  
-**Version**: 1.0.0
+**Last Updated**: July 6, 2026  
+**Version**: 2.0.0 (with Kubernetes support)
 
 For issues or questions, please open an issue on the repository.
