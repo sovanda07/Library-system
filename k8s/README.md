@@ -42,23 +42,14 @@ docker push <your-docker-username>/library-sys-borrow-service:latest
 
 Then replace the image values in the deployment YAML files with the exact image names you pushed.
 
-## 3. Create secrets for sensitive values
-
-Do not commit your real credentials to GitHub. Inject them in secrets.yaml file at deployment time:
-
-```bash
-kubectl create secret generic library-secrets -n library-system \
-  --from-literal=JWT_SECRET='<your-secret>' \
-  --from-literal=MONGO_URI='<your-mongodb-atlas-uri>'
-```
-
-## 4. Apply the Kubernetes manifests
+## 3. Apply the Kubernetes manifests
 
 ```bash
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/mongo.yaml
+kubectl apply -f k8s/secrets.yaml
 kubectl apply -f k8s/mongo-pvc.yaml
+kubectl apply -f k8s/mongo.yaml
 kubectl apply -f k8s/redis.yaml
 kubectl apply -f k8s/shared-logs.yaml
 kubectl apply -f k8s/auth-service.yaml
@@ -72,6 +63,17 @@ or simply
 ```bash
 kubectl apply -f k8s/
 ```
+## 4. Create secrets for sensitive values
+
+Do not commit your real credentials to GitHub. Inject them in secrets.yaml file at deployment time:
+
+```bash
+kubectl create secret generic library-secrets -n library-system \
+  --from-literal=JWT_SECRET='<your-secret>' \
+  --from-literal=MONGO_URI='<your-mongodb-atlas-uri>'
+```
+
+
 
 ## 5. Verify the rollout
 
