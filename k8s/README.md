@@ -99,6 +99,42 @@ If your cluster has an ingress controller installed, use the ingress host:
 kubectl get ingress -n library-system
 ```
 
+## Configure Fanout DNS (library.com) for local testing
+
+This project uses the Ingress host `library.com` to demonstrate fanout DNS routing. For local Minikube testing, map `library.com` to the cluster IP (or use an HTTP Host header).
+
+1. Enable the ingress addon (Minikube):
+
+```bash
+minikube addons enable ingress
+```
+
+2. Get Minikube IP (or use the LoadBalancer IP if available):
+
+```bash
+minikube ip
+# or, if using a cloud LB: kubectl get svc library-sys-api-gateway -n library-system
+```
+
+3. Add a hosts entry on your machine (requires sudo) replacing <MINIKUBE_IP>:
+
+```bash
+echo "<MINIKUBE_IP> library.com" | sudo tee -a /etc/hosts
+```
+
+4. Verify the ingress is routing to the API Gateway and that the gateway forwards to services:
+
+```bash
+# after hosts entry, test with curl
+curl http://library.com/books
+
+# or use Host header without modifying /etc/hosts
+curl -H "Host: library.com" http://<MINIKUBE_IP>/books
+```
+
+5. Production note: to use a real domain, create DNS A records for `library.com` pointing at your cluster's external IP(s) or load balancer.
+
+
 ## 7. Troubleshooting
 
 If deployment fails, check:
@@ -108,3 +144,38 @@ kubectl describe pod -n library-system -l app=library-sys-auth-service
 kubectl describe pod -n library-system -l app=library-sys-book-service
 kubectl describe pod -n library-system -l app=library-sys-borrow-service
 ```
+
+## Shared volume (logs/data) verification
+
+This project includes a PVC (`library-sys-shared-pvc`) mounted at `/shared/logs` in the `api-gateway` and `book-service` pods. Both deployments also include a lightweight `busybox` sidecar that writes a test file on startup.
+
+Apply the PVC and updated deployments (if not already applied):
+
+```bash
+kubectl apply -f k8s/shared-pvc.yaml
+kubectl apply -f k8s/book-service.yaml
+kubectl apply -f k8s/api-gateway.yaml
+```
+
+Verify the pods are running:
+
+```bash
+kubectl get pods -n library-system
+```
+
+Check the files written by the sidecars (replace `<POD>` with an api-gateway or book-service pod name):
+
+```bash
+kubectl exec -n library-system -it <POD> -- cat /shared/logs/api.txt
+kubectl exec -n library-system -it <POD> -- cat /shared/logs/book.txt
+```
+
+You can also write a file from one pod and read it from another to demonstrate sharing:
+
+```bash
+kubectl exec -n library-system -it $(kubectl get pod -n library-system -l app=library-sys-api-gateway -o jsonpath='{.items[0].metadata.name}') -- sh -c "echo hello > /shared/logs/from-api.txt"
+kubectl exec -n library-system -it $(kubectl get pod -n library-system -l app=library-sys-book-service -o jsonpath='{.items[0].metadata.name}') -- cat /shared/logs/from-api.txt
+```
+
+Note: Minikube uses a single node by default; `ReadWriteOnce` PVCs work for sharing on that node. For production clusters with multiple nodes, prefer a storage class that supports `ReadWriteMany`.
+

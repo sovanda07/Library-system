@@ -1,7 +1,8 @@
 const express = require('express');
 const app = express();
+const http = require('http');
 const httpProxy = require('http-proxy');
-const proxy = httpProxy.createProxyServer();
+const proxy = httpProxy.createProxyServer({ changeOrigin: true, preserveHeaderKeyCase: true });
 require('dotenv').config();
 
 const verifyToken = require('../shared/middleware/verifyToken');
@@ -17,15 +18,50 @@ proxy.on('error', (err, req, res) => {
   res.status(502).json({ message: 'Service unavailable' });
 });
 
+function relayAuth(req, res) {
+  const chunks = [];
+
+  req.on('data', (chunk) => chunks.push(chunk));
+  req.on('end', () => {
+    const payload = Buffer.concat(chunks);
+
+    const options = {
+      hostname: 'library-sys-auth-service',
+      port: 3000,
+      path: req.originalUrl.replace(/^\/auth/, ''),
+      method: req.method,
+      headers: {
+        ...req.headers,
+        host: undefined,
+        connection: undefined,
+        'content-length': payload.length
+      }
+    };
+
+    const upstream = http.request(options, (response) => {
+      res.statusCode = response.statusCode || 502;
+      response.pipe(res);
+    });
+
+    upstream.on('error', (err) => {
+      console.error('Upstream error:', err);
+      res.status(502).json({ message: 'Auth service unavailable' });
+    });
+
+    if (payload.length > 0) {
+      upstream.write(payload);
+    }
+
+    upstream.end();
+  });
+}
+
 // Auth routes — no token needed
 // POST /auth/login
 // POST /auth/register
 // POST /auth/forgot-password
 // POST /auth/reset-password
-app.use('/auth', (req, res) => {
-  req.url = req.originalUrl.replace('/auth', '')
-  proxy.web(req, res, { target: AUTH_SERVICE_URL });
-});
+app.use('/auth', relayAuth);
 
 // Get all books — member + librarian
 app.get('/books', verifyToken, authorizeRole('member', 'librarian'), (req, res) => {

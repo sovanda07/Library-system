@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: library-sys-borrow-service
-          image: <your-docker-username>/library-sys-borrow-service:latest
+          image: sovanda07/library-sys-borrow-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3002

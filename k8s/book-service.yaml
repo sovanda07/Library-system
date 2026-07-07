@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: library-sys-book-service
-          image: <your-docker-username>/library-sys-book-service:latest
+          image: sovanda07/library-sys-book-service:1.0.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3001
@@ -27,6 +27,25 @@ spec:
           env:
             - name: PORT
               value: "3001"
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /shared/logs
+        - name: shared-writer
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /shared/logs
+              for i in 1 2 3; do echo "book-service: $(date)" >> /shared/logs/book.txt && break || sleep 1; done
+              sleep 3600
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /shared/logs
+      volumes:
+        - name: shared-logs
+          persistentVolumeClaim:
+            claimName: library-sys-shared-pvc
 ---
 apiVersion: v1
 kind: Service
