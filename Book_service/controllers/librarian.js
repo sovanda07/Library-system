@@ -109,7 +109,7 @@ exports.deleteBook = async (req, res) => {
     const book = await Book.findOneAndDelete({ bookId: req.params.bookId });
     if (!book) return res.status(404).json({ message: 'Book not found' });
     await redis.del('all_books');
-    await redis.del(`book_${req.params.id}`);
+    await redis.del(`book_${req.params.bookIdd}`);
     res.json({ message: 'Book deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });
