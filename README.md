@@ -248,7 +248,7 @@ For detailed setup instructions, see [Setup & Installation](#setup--installation
 
 ---
 
-### 3. **Book Service** (Multiple instances - 2 replicas)
+### 3. **Book Service** (Multiple instances - 2 replicas) (Port 3001)
 **Purpose**: Manage library book catalog with search, filtering, and book operations.
 
 **Routes**:
@@ -273,7 +273,7 @@ For detailed setup instructions, see [Setup & Installation](#setup--installation
 
 ---
 
-### 4. **Borrow Service** (Port 5000)
+### 4. **Borrow Service** (Port 3002)
 **Purpose**: Manage book borrowing and return operations for members.
 
 **Endpoints**:
