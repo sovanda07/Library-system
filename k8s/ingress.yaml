@@ -3,9 +3,8 @@ kind: Ingress
 metadata:
   name: library-sys-ingress
   namespace: library-system
-  annotations:
-    kubernetes.io/ingress.class: nginx
 spec:
+  ingressClassName: nginx
   rules:
     - host: library.com
       http:
