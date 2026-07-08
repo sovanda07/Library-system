@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
         - name: library-sys-api-gateway
-          image: <your-docker-username>/library-sys-api-gateway:latest
-          imagePullPolicy: IfNotPresent
+          image: library-sys-api-gateway:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 4000
           envFrom:

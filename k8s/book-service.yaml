@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
         - name: library-sys-book-service
-          image: <your-docker-username>/library-sys-book-service:latest
-          imagePullPolicy: IfNotPresent
+          image: library-sys-book-service:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 3001
           envFrom:

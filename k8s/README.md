@@ -29,15 +29,17 @@ The manifests use a `library-sys-` prefix so they are less likely to collide wit
 From the project root, build the images and push them to your registry:
 
 ```bash
-docker build -t <your-docker-username>/library-sys-api-gateway:latest -f API_Gateway/Dockerfile .
-docker build -t <your-docker-username>/library-sys-auth-service:latest -f Auth_service/Dockerfile .
-docker build -t <your-docker-username>/library-sys-book-service:latest -f Book_service/Dockerfile .
-docker build -t <your-docker-username>/library-sys-borrow-service:latest -f Borrow_service/Dockerfile .
+eval $(minikube docker-env)
 
-docker push <your-docker-username>/library-sys-api-gateway:latest
-docker push <your-docker-username>/library-sys-auth-service:latest
-docker push <your-docker-username>/library-sys-book-service:latest
-docker push <your-docker-username>/library-sys-borrow-service:latest
+docker build -t library-sys-api-gateway:latest -f API_Gateway/Dockerfile .
+docker build -t library-sys-auth-service:latest -f Auth_service/Dockerfile .
+docker build -t library-sys-book-service:latest -f Book_service/Dockerfile .
+docker build -t library-sys-borrow-service:latest -f Borrow_service/Dockerfile .
+
+docker push library-sys-api-gateway:latest
+docker push library-sys-auth-service:latest
+docker push library-sys-book-service:latest
+docker push library-sys-borrow-service:latest
 ```
 
 Then replace the image values in the deployment YAML files with the exact image names you pushed.
